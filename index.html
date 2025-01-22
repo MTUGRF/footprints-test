@@ -1,0 +1,63 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Sanborn Building Footprints Example</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.31/"></script>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <script>
+      require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer"], (Map, MapView, FeatureLayer, TileLayer) => {
+        const map = new Map({
+          basemap: "hybrid"
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-88.5694, 47.1211],
+          zoom: 13
+         
+        });
+
+        /********************
+         * Add feature layer
+         ********************/
+
+        // Carbon storage of trees in Warren Wilson College.
+        const FP1949 = new FeatureLayer({
+          url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/1949_bldg_footprints/FeatureServer"
+        });
+
+        map.add(FP1949);
+
+        const SB1949 = new TileLayer({
+          url: "https://portal1-geo.sabu.mtu.edu:6443/arcgis/rest/services/KeweenawHSDI/Kett_19496_FIPS/MapServer"
+        });
+
+        map.add(SB1949, 0);
+
+        // popup template for the footprints layer
+        FP1949.popupTemplate = {
+          content: "test"
+        };
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
