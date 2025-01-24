@@ -3,8 +3,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <title>Sanborn Building Footprints Example</title>
-
-    <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
+     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" /><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://js.arcgis.com/4.31/"></script>
 
     <style>
@@ -19,7 +20,10 @@
     </style>
 
     <script>
-      require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer"], (Map, MapView, FeatureLayer, TileLayer) => {
+      
+      require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer", "esri/core/reactiveUtils"], (Map, MapView, FeatureLayer, TileLayer, reactiveUtils) => {
+
+        const sideBar = new bootstrap.Offcanvas('#sidebar');
         const map = new Map({
           basemap: "hybrid"
         });
@@ -28,17 +32,19 @@
           container: "viewDiv",
           map: map,
           center: [-88.5694, 47.1211],
-          zoom: 13
+          zoom: 18
          
         });
 
         /********************
-         * Add feature layer
+         * Add map layers
          ********************/
 
-        // Carbon storage of trees in Warren Wilson College.
+        // 1949 sanborn building footprints.
         const FP1949 = new FeatureLayer({
-          url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/1949_bldg_footprints/FeatureServer"
+          url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/1949_bldg_footprints/FeatureServer",
+          id: "sanborn49",
+          outFields: ["*"]
         });
 
         map.add(FP1949);
@@ -49,15 +55,133 @@
 
         map.add(SB1949, 0);
 
+        // kett record locations.
+        const recLocs = new FeatureLayer({
+          url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/giscore_grf_kett_record_locs/FeatureServer",
+          id: "reclocs",
+          outFields: ["*"]
+        });
+
         // popup template for the footprints layer
         FP1949.popupTemplate = {
           content: "test"
         };
+
+        // Assuming you have a reference to the sidebar and `accordion` container
+//const sideBar = document.getElementById('sideBar');
+const accordionContainer = document.getElementById('accordion');
+
+// Watch for the selected feature
+reactiveUtils.watch(
+  () => view.popup.selectedFeature,
+  (graphic) => {
+    if (graphic) {
+      if (graphic.layer.id === "sanborn49") {
+        console.log(graphic);
+
+        const uniqueID = graphic.attributes.uniqueid;
+        const bldgID = graphic.attributes.join_id + "|" + graphic.attributes.place_nam + "|bldg";
+        let query = recLocs.createQuery();
+        query.where = "loccode = '" + bldgID + "'";
+        query.outFields = ["recordid", "entitytype", "byear", "stitle", "descr", "loccode"];
+
+        recLocs.queryFeatures(query)
+          .then(function(response) {
+            console.log(response);
+
+            // Clear existing accordion content
+            accordionContainer.innerHTML = '';
+
+            const features = response.features;
+
+            // Dynamically generate accordion items
+            features.forEach((feature, index) => {
+              const { stitle, descr } = feature.attributes;
+
+              // Create unique IDs for Bootstrap collapse
+              const accordionItemId = `accordion-item-${index}`;
+              const accordionHeaderId = `heading-${index}`;
+              const collapseId = `collapse-${index}`;
+
+              // Generate accordion item HTML
+              const accordionItemHTML = `
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="${accordionHeaderId}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                      ${stitle}
+                    </button>
+                  </h2>
+                  <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${accordionHeaderId}" data-bs-parent="#accordion">
+                    <div class="accordion-body">
+                      ${descr}
+                    </div>
+                  </div>
+                </div>
+              `;
+
+              // Append to accordion container
+              accordionContainer.insertAdjacentHTML('beforeend', accordionItemHTML);
+            });
+
+            // Show the sidebar
+            sideBar.show();
+          });
+      }
+    }
+  }
+);
       });
     </script>
   </head>
 
   <body>
+    <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="sidebar" aria-labelledby="offcanvasScrollingLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasScrollingLabel">Offcanvas with body scrolling</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div class="accordion" id="accordion">
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+        Accordion Item #1
+      </button>
+    </h2>
+    <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+        Accordion Item #2
+      </button>
+    </h2>
+    <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+        Accordion Item #3
+      </button>
+    </h2>
+    <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+</div>
+      </div>
+    </div>
     <div id="viewDiv"></div>
+    
   </body>
 </html>
