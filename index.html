@@ -1,4 +1,4 @@
-\<html lang="en">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
@@ -34,9 +34,7 @@
   white-space: nowrap;
 }
 
-.modal-backdrop {
-  display: none !important;
-}
+.modal-backdrop { display: none; } .modal { pointer-events: none; }
     </style>
 
     <script>
@@ -44,7 +42,7 @@
       require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer", "esri/core/reactiveUtils"], (Map, MapView, FeatureLayer, TileLayer, reactiveUtils) => {
 
         const sideBar = new bootstrap.Offcanvas('#sidebar');
-         const recModal = new bootstrap.Offcanvas('#recModal');
+        // const recModal = new bootstrap.Offcanvas('#recModal');
         const map = new Map({
           basemap: "hybrid"
         });
@@ -108,10 +106,10 @@
 //const sideBar = document.getElementById('sideBar');
 const accordionContainer = document.getElementById('accordion');
 
-/*const recModal = new bootstrap.Modal('#recModal', {
+const recModal = new bootstrap.Modal('#recModal', {
   keyboard: false,
   backdrop: false
-})*/
+})
 
 const modal = document.getElementsByClassName("modal-dialog");
 
@@ -233,7 +231,7 @@ reactiveUtils.watch(
   </head>
 
   <body>
-   <!--  <div class="modal" tabindex="-1" id="recModal" data-bs-backdrop="false" data-bs-scroll="true">
+     <div class="modal" tabindex="-1" id="recModal" data-bs-backdrop="false" data-bs-scroll="true">
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
@@ -250,8 +248,8 @@ reactiveUtils.watch(
       </div>
     </div>
   </div>
-</div> -->
-<div class="offcanvas offcanvas-end" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="recModal" aria-labelledby="offcanvasScrollingLabel">
+</div>
+<!-- <div class="offcanvas offcanvas-end" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="recModal" aria-labelledby="offcanvasScrollingLabel">
       <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="rec-name"></h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -260,7 +258,7 @@ reactiveUtils.watch(
          <table class="table table-striped table-bordered" id="census-table">
 </table>
       </div>
-    </div>
+    </div> -->
     <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="sidebar" aria-labelledby="offcanvasScrollingLabel">
       <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="offcanvasScrollingLabel"></h5>
