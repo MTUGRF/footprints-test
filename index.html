@@ -39,7 +39,8 @@
 
     <script>
       
-      require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer", "esri/core/reactiveUtils"], (Map, MapView, FeatureLayer, TileLayer, reactiveUtils) => {
+      require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer", "esri/core/reactiveUtils", "esri/Graphic",
+  "esri/layers/GraphicsLayer", "esri/geometry/geometryEngine"], (Map, MapView, FeatureLayer, TileLayer, reactiveUtils, Graphic, GraphicsLayer, geometryEngine) => {
 
         const sideBar = new bootstrap.Offcanvas('#sidebar');
         // const recModal = new bootstrap.Offcanvas('#recModal');
@@ -51,10 +52,61 @@
           container: "viewDiv",
           map: map,
           center: [-88.5694, 47.1211],
-          zoom: 18
+          zoom: 2
          
         });
 
+
+          // Create a graphics layer
+  const graphicsLayer = new GraphicsLayer();
+  map.add(graphicsLayer);
+
+  // Define start and end points
+  const startPoint = [-122.4194, 37.7749]; // San Francisco
+  const endPoint = [-74.006, 40.7128]; // New York
+
+  // Function to generate arc points using quadratic Bézier formula
+  function generateArcPoints(start, end, segments = 100) {
+    const midPoint = [
+      (start[0] + end[0]) / 2,
+      (start[1] + end[1]) / 2 + 10 // Raise midpoint for arc effect
+    ];
+
+    const points = [];
+    for (let t = 0; t <= 1; t += 1 / segments) {
+      const x = (1 - t) ** 2 * start[0] + 2 * (1 - t) * t * midPoint[0] + t ** 2 * end[0];
+      const y = (1 - t) ** 2 * start[1] + 2 * (1 - t) * t * midPoint[1] + t ** 2 * end[1];
+      points.push([x, y]);
+    }
+    return points;
+  }
+
+  // Animate the line drawing
+  function animateArc(points) {
+    let currentIndex = 0;
+    const polylineGraphic = new Graphic({
+      geometry: { type: "polyline", paths: [] },
+      symbol: { type: "simple-line", color: [255, 0, 0], width: 2 }
+    });
+    graphicsLayer.add(polylineGraphic);
+
+    function drawStep() {
+      if (currentIndex < points.length) {
+        polylineGraphic.geometry = {
+          type: "polyline",
+          paths: [points.slice(0, currentIndex)]
+        };
+        currentIndex++;
+        requestAnimationFrame(drawStep);
+      }
+    }
+    drawStep();
+  }
+
+  // Generate arc and animate
+  const arcPoints = generateArcPoints(startPoint, endPoint);
+  animateArc(arcPoints);
+ 
         /********************
          * Add map layers
          ********************/
