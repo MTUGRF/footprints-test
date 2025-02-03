@@ -30,20 +30,30 @@
       }
 
       #census-table td, #census-table th {
-  padding: 10px;
-  white-space: nowrap;
-}
+        padding: 10px;
+        white-space: nowrap;
+      }
 
-.modal-backdrop { display: none; } .modal { pointer-events: none; }
+      .modal-backdrop { display: none; } .modal { pointer-events: none; }
+
+
     </style>
 
-    <script>
-      
+    <script>      
       require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/TileLayer", "esri/core/reactiveUtils", "esri/Graphic",
-  "esri/layers/GraphicsLayer", "esri/geometry/geometryEngine"], (Map, MapView, FeatureLayer, TileLayer, reactiveUtils, Graphic, GraphicsLayer, geometryEngine) => {
+  "esri/layers/GraphicsLayer", "esri/geometry/geometryEngine"], (Map, MapView, FeatureLayer, TileLayer, reactiveUtils) => {
 
         const sideBar = new bootstrap.Offcanvas('#sidebar');
-        // const recModal = new bootstrap.Offcanvas('#recModal');
+        const table = document.getElementById("census-table");
+        const recName = document.getElementById('rec-name');
+        const recModal = new bootstrap.Modal('#recModal', {
+          keyboard: false,
+          backdrop: false
+        });
+
+        const modal = document.getElementsByClassName("modal-dialog");
+        const personList = document.getElementById('list-group');
+
         const map = new Map({
           basemap: "hybrid"
         });
@@ -52,61 +62,10 @@
           container: "viewDiv",
           map: map,
           center: [-88.5694, 47.1211],
-          zoom: 2
+          zoom: 18
          
         });
 
-
-          // Create a graphics layer
-  const graphicsLayer = new GraphicsLayer();
-  map.add(graphicsLayer);
-
-  // Define start and end points
-  const startPoint = [-122.4194, 37.7749]; // San Francisco
-  const endPoint = [-74.006, 40.7128]; // New York
-
-  // Function to generate arc points using quadratic Bézier formula
-  function generateArcPoints(start, end, segments = 100) {
-    const midPoint = [
-      (start[0] + end[0]) / 2,
-      (start[1] + end[1]) / 2 + 10 // Raise midpoint for arc effect
-    ];
-
-    const points = [];
-    for (let t = 0; t <= 1; t += 1 / segments) {
-      const x = (1 - t) ** 2 * start[0] + 2 * (1 - t) * t * midPoint[0] + t ** 2 * end[0];
-      const y = (1 - t) ** 2 * start[1] + 2 * (1 - t) * t * midPoint[1] + t ** 2 * end[1];
-      points.push([x, y]);
-    }
-    return points;
-  }
-
-  // Animate the line drawing
-  function animateArc(points) {
-    let currentIndex = 0;
-    const polylineGraphic = new Graphic({
-      geometry: { type: "polyline", paths: [] },
-      symbol: { type: "simple-line", color: [255, 0, 0], width: 2 }
-    });
-    graphicsLayer.add(polylineGraphic);
-
-    function drawStep() {
-      if (currentIndex < points.length) {
-        polylineGraphic.geometry = {
-          type: "polyline",
-          paths: [points.slice(0, currentIndex)]
-        };
-        currentIndex++;
-        requestAnimationFrame(drawStep);
-      }
-    }
-    drawStep();
-  }
-
-  // Generate arc and animate
-  const arcPoints = generateArcPoints(startPoint, endPoint);
-  animateArc(arcPoints);
- 
         /********************
          * Add map layers
          ********************/
@@ -126,14 +85,14 @@
 
         map.add(SB1949, 0);
 
-        // kett record locations.
+        // historical person geocoded record locations layer
         const recLocs = new FeatureLayer({
           url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/giscore_grf_kett_record_locs/FeatureServer",
           id: "reclocs",
           outFields: ["*"]
         });
 
-        // historical census records.
+        // historical census records
         const censusRecs = new FeatureLayer({
           url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/cesnsus_records_allyears/FeatureServer",
           id: "cenrecs",
@@ -141,7 +100,7 @@
         });
         
 
-        // historical city dir records.
+        // historical city directpru records.
         const dirRecs = new FeatureLayer({
           url: "https://portal1-geo.sabu.mtu.edu/server/rest/services/Hosted/allyears_city_directories/FeatureServer",
           id: "dirrecs",
@@ -154,34 +113,23 @@
           content: "test"
         };
 
-        // Assuming you have a reference to the sidebar and `accordion` container
-//const sideBar = document.getElementById('sideBar');
-const accordionContainer = document.getElementById('accordion');
-
-const recModal = new bootstrap.Modal('#recModal', {
-  keyboard: false,
-  backdrop: false
-})
-
-const modal = document.getElementsByClassName("modal-dialog");
-
 reactiveUtils.watch(
   () => view.popup.selectedFeature,
   (graphic) => {
     if (graphic) {
       if (graphic.layer.id === "sanborn49") {
-        console.log(graphic);
-
         const uniqueID = graphic.attributes.uniqueid;
-        const bldgID = graphic.attributes.join_id + "|" + graphic.attributes.place_nam + "|bldg";
+        const bldgID = graphic.attributes.join_id + "|" + graphic.attributes.place_nam + "|bldg"; // the building ID number from the historical record locations.
         const address = graphic.attributes.address;
         let query = recLocs.createQuery();
+        // query the person record locations for all people living in the bldgID
         query.where = "loccode = '" + bldgID + "' AND typedescr = 'people'" ;
         query.outFields = ["recordid", "entitytype", "byear", "stitle", "descr", "loccode", "geodescr"];
-
+        // execute the query for the historical records based on the id of the building clicked
         recLocs.queryFeatures(query)
           .then(function(response) {
             console.log(response);
+            if (response.features.length > 0) {
 
             // Clear existing list group content
             const listGroupContainer = document.getElementById('list-group');
@@ -207,7 +155,7 @@ reactiveUtils.watch(
 
               // Append to the list group container
               listGroupContainer.insertAdjacentHTML('beforeend', listGroupItemHTML);
-            });
+            });           
 
             // Add click event listener to list group items
             listGroupContainer.querySelectorAll('.list-group-item').forEach((item, index) => {
@@ -217,13 +165,14 @@ reactiveUtils.watch(
                 // Access the clicked feature's attributes
                 const clickedFeature = features[index];
                 const recId = clickedFeature.attributes.recordid;
-
+                // For the clicked record, query any census records for that person
                 let censusQuery = censusRecs.createQuery();
-                censusQuery.where = "recordid = '" + recId + "'" ;
+                censusQuery.where = "recordid = '" + recId + "'" ; // use the person records ID number in the Census Records layer
                 censusQuery.outFields = ["*"];
-
+                // Execute the query for a persons' census records
                 censusRecs.queryFeatures(censusQuery)
                   .then(function(response) {
+                    if (response.features.length > 0) {
                     const features = response.features[0].attributes;
 
                     const fieldNames = {
@@ -249,13 +198,11 @@ reactiveUtils.watch(
                       sex: "Sex",
                       wrkrclass: "Worker Class",
                       year_immigrated: "Year Immigrated"
-                    };
-    
-                    const table = document.getElementById("census-table");
-                    const recName = document.getElementById('rec-name');
+                    };   
+                    
                     recName.textContent = clickedFeature.attributes.stitle;
                     table.innerHTML = ""; // Clear existing table content
-                    
+                    // Populate bootstrap Table with the attributes for the Census record. 
                     for (const key in fieldNames) {
                       if (features.hasOwnProperty(key)) {
                         const row = document.createElement("tr");
@@ -263,16 +210,20 @@ reactiveUtils.watch(
                         table.appendChild(row);
                       }
                     }
+                  } else {
+                    table.innerHTML = '<i>There is no Ceneus record available for this person during this time period.</i>'
+                    recName.textContent = "No Record Found"
+                  }
 
                   });
-
-
                   recModal.show();
               });
             });
+             } else {
+              document.getElementById('list-group').innerHTML = '<i>No historical person records can be found for this building. Try clicking on another building.</i>';
+            }
             document.getElementById('offcanvasScrollingLabel').innerHTML = address;
             sideBar.show();
-
           });
       }
     }
@@ -293,11 +244,7 @@ reactiveUtils.watch(
       <div class="modal-body">
         <table class="table table-striped table-bordered" id="census-table">
 </table>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
-      </div>
+      </div>      
     </div>
   </div>
 </div>
